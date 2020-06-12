@@ -9,10 +9,9 @@ using System.Threading.Tasks;
 
 namespace MusicFileAPI.Validators
 {
-    public class UploadFileValidator : AbstractValidator<UploadMusicFileRequest>
+    public class EditMusicInfoValidator : AbstractValidator<MusicStream>
     {
-        public string allowedExtentions = ".mp3, .mp4, .m4a, .m4p, .m4b, .m4r, .m4v, .3gp, .wav, .wave, .aac, .ogg, .ogv, .oga, .ogx, .ogm, .spx, .opus, .webm, .flac";
-        public UploadFileValidator()
+        public EditMusicInfoValidator()
         {
             RuleFor(r => r.artist)
                 .NotEmpty()
@@ -24,16 +23,13 @@ namespace MusicFileAPI.Validators
                 .WithErrorCode("TitleMissing")
                 .WithMessage("{PropertyName} is missing.");
 
-            RuleFor(r => r.musicFile)
-                .Must(x => x != null)
+            RuleFor(r => r.uri)
+                .NotEmpty()
                 .WithErrorCode("MusicFileMissing")
-                .WithMessage("{PropertyName} is missing.")
-                .Must(x => x!= null && this.allowedExtentions.IndexOf(Path.GetExtension(x.FileName)) != -1)
-                .WithErrorCode("BadFileExtension")
-                .WithMessage("{PropertyName} has wrong file exention.");
+                .WithMessage("{PropertyName} is missing.");
         }
 
-        public override ValidationResult Validate(ValidationContext<UploadMusicFileRequest> context)
+        public override ValidationResult Validate(ValidationContext<MusicStream> context)
         {
             if (context.InstanceToValidate == null)
             {

@@ -44,7 +44,7 @@ namespace MusicFileAPI
             ConfigureCors(services);
 
             services.AddSingleton<ICloudStorage, AzureStorage>();
-            services.AddSingleton<IStorageConnectionFactory, StorageConnectionFactory>(serviceProvider => 
+            services.AddSingleton<IStorageConnectionFactory, StorageConnectionFactory>(sp => 
             {
                 CloudStorageOptions cloudStorageOptions = new CloudStorageOptions();
                 cloudStorageOptions.ConnectionString = Configuration["AzureBlobStorage:ConnectionString"];

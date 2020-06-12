@@ -19,16 +19,57 @@ namespace MusicFileAPI.Services
         {
             _storageConnectionFactory = storageConnectionFactory;
         }
-        public async Task DeleteAll()
+
+        public async Task<List<MusicStream>> GetAll()
+        {
+            List<MusicStream> allBlobs = new List<MusicStream>();
+            var blobContainer = await _storageConnectionFactory.GetContainer();
+            foreach (CloudBlockBlob item in blobContainer.ListBlobs(null, true, BlobListingDetails.Metadata))
+            {
+                allBlobs.Add(new MusicStream
+                {
+                    uri = item.Uri,
+                    artist = item.Metadata.FirstOrDefault(x => x.Key == "artist").Value,
+                    title = item.Metadata.FirstOrDefault(x => x.Key == "title").Value
+                });
+            }
+            return allBlobs;
+        }
+
+        public async Task UploadAsync(UploadMusicFileRequest request)
         {
             var blobContainer = await _storageConnectionFactory.GetContainer();
-            foreach (var blob in blobContainer.ListBlobs())
+            CloudBlockBlob blob = blobContainer.GetBlockBlobReference(GetRandomBlobName(request.musicFile.FileName));
+            using (var stream = request.musicFile.OpenReadStream())
             {
-                if (blob.GetType() == typeof(CloudBlockBlob))
+                blob.Metadata.Add("title", request.title);
+                blob.Metadata.Add("artist", request.artist);
+                await blob.UploadFromStreamAsync(stream);
+            }
+        }
+
+        public async Task EditMusicInfo(MusicStream musicStream)
+        {
+            var blobContainer = await _storageConnectionFactory.GetContainer();
+            string filename = Path.GetFileName(musicStream.uri.LocalPath);
+
+            var blob = blobContainer.GetBlockBlobReference(filename);
+            //
+            var metadataKeys = new string[] { "title", "artist" };
+            foreach (string key in metadataKeys)
+            {
+                if (blob.Metadata.ContainsKey(key))
                 {
-                    await ((CloudBlockBlob)blob).DeleteIfExistsAsync();
+                    blob.Metadata[key] = key == "title" ? musicStream.title : musicStream.artist;
+                }
+                else
+                {
+                    blob.Metadata.Add(key, key == "title" ? musicStream.title : musicStream.artist);
                 }
             }
+            //
+            blob.SetMetadata();
+
         }
 
         public async Task DeleteFile(string fileName)
@@ -41,31 +82,15 @@ namespace MusicFileAPI.Services
             await blob.DeleteIfExistsAsync();
         }
 
-        public async Task<List<FileDetails>> GetAll()
+        public async Task DeleteAll()
         {
-            List<FileDetails> allBlobs = new List<FileDetails>();
             var blobContainer = await _storageConnectionFactory.GetContainer();
-            foreach (CloudBlockBlob item in blobContainer.ListBlobs(null, true, BlobListingDetails.Metadata))
+            foreach (var blob in blobContainer.ListBlobs())
             {
-                allBlobs.Add(new FileDetails
+                if (blob.GetType() == typeof(CloudBlockBlob))
                 {
-                    uri = item.Uri,
-                    artist = item.Metadata.FirstOrDefault(x => x.Key == "artist").Value,
-                    title = item.Metadata.FirstOrDefault(x => x.Key == "title").Value
-                });
-            }
-            return allBlobs;
-        }
-
-        public async Task UploadAsync(UploadMusicFileRequest payLoadDetails)
-        {
-            var blobContainer = await _storageConnectionFactory.GetContainer();
-            CloudBlockBlob blob = blobContainer.GetBlockBlobReference(GetRandomBlobName(payLoadDetails.musicFile.FileName));
-            using (var stream = payLoadDetails.musicFile.OpenReadStream())
-            {
-                blob.Metadata.Add("title", payLoadDetails.title);
-                blob.Metadata.Add("artist", payLoadDetails.artist);
-                await blob.UploadFromStreamAsync(stream);
+                    await ((CloudBlockBlob)blob).DeleteIfExistsAsync();
+                }
             }
         }
 
